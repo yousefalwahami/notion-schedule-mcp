@@ -32,6 +32,8 @@ export async function POST(request: NextRequest) {
     }
 
     const composioApiKey = process.env.COMPOSIO_API_KEY;
+    const composioBase =
+      process.env.COMPOSIO_BASE_URL || "https://backend.composio.dev";
     if (!composioApiKey) {
       return NextResponse.json(
         { error: "Composio API key not configured" },
@@ -50,15 +52,42 @@ export async function POST(request: NextRequest) {
       }))
     );
 
+    // Get connected account for v3 API
+    const accountsResponse = await fetch(
+      `${composioBase}/api/v3/connectedAccounts?appName=notion`,
+      {
+        method: "GET",
+        headers: {
+          "X-API-Key": composioApiKey,
+        },
+      }
+    );
+
+    if (!accountsResponse.ok) {
+      return NextResponse.json(
+        { error: "No Notion account connected" },
+        { status: 400 }
+      );
+    }
+
+    const accounts = await accountsResponse.json();
+    const connectedAccount = accounts.items?.[0];
+
+    if (!connectedAccount) {
+      return NextResponse.json(
+        { error: "No Notion account connected" },
+        { status: 400 }
+      );
+    }
+
     // Use Composio MCP to create Notion pages
-    // Composio action: NOTION_CREATE_PAGE
     const notionPages = [];
 
     for (const assignment of allAssignments) {
       try {
-        // Make request to Composio API to create Notion page
+        // Make request to Composio API to create Notion page using v3 API
         const response = await fetch(
-          "https://backend.composio.dev/api/v1/actions/NOTION_CREATE_PAGE/execute",
+          `${composioBase}/api/v3/actions/NOTION_CREATE_PAGE/execute`,
           {
             method: "POST",
             headers: {
@@ -66,6 +95,7 @@ export async function POST(request: NextRequest) {
               "X-API-Key": composioApiKey,
             },
             body: JSON.stringify({
+              connectedAccountId: connectedAccount.id,
               input: {
                 parent: notionDatabaseId
                   ? {

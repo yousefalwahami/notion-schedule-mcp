@@ -9,6 +9,10 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@composio/core": "^0.2.3",
+    "@modelcontextprotocol/sdk": "^1.21.0",
+    "composio": "^1.0.0",
+    "dotenv": "^17.2.3",
     "next": "16.0.1",
     "pdf-parse": "^2.4.5",
     "react": "19.2.0",

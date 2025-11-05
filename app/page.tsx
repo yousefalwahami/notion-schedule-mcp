@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 interface UploadedFile {
   file: File;
@@ -24,6 +24,12 @@ interface ParsedSyllabus {
   instructor?: string;
 }
 
+interface NotionDatabase {
+  id: string;
+  title: string;
+  url: string;
+}
+
 export default function Home() {
   const [files, setFiles] = useState<UploadedFile[]>([]);
   const [isDragging, setIsDragging] = useState(false);
@@ -32,7 +38,26 @@ export default function Home() {
   const [error, setError] = useState<string>("");
   const [isSendingToNotion, setIsSendingToNotion] = useState(false);
   const [notionSuccess, setNotionSuccess] = useState<string>("");
-  const [notionDatabaseId, setNotionDatabaseId] = useState<string>("");
+  const [notionConnected, setNotionConnected] = useState(false);
+  const [isConnectingNotion, setIsConnectingNotion] = useState(false);
+  const [notionDatabases, setNotionDatabases] = useState<NotionDatabase[]>([]);
+  const [selectedDatabaseId, setSelectedDatabaseId] = useState<string>("");
+  const [isCreatingDatabase, setIsCreatingDatabase] = useState(false);
+
+  // Check if Notion was just connected (from OAuth redirect)
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("connected") === "true") {
+      setNotionConnected(true);
+      fetchNotionDatabases();
+      // Clean up URL
+      window.history.replaceState({}, "", "/");
+    } else if (params.get("error")) {
+      setError("Failed to connect to Notion. Please try again.");
+      // Clean URL
+      window.history.replaceState({}, "", "/");
+    }
+  }, []);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
@@ -80,6 +105,62 @@ export default function Home() {
     return Math.round((bytes / Math.pow(k, i)) * 100) / 100 + " " + sizes[i];
   };
 
+  const connectNotion = async () => {
+    setIsConnectingNotion(true);
+    setError("");
+
+    // Use the new Composio connect flow
+    window.location.href = "/api/composio/connect-notion";
+  };
+
+  const fetchNotionDatabases = async () => {
+    try {
+      const response = await fetch("/api/notion/databases");
+      const data = await response.json();
+
+      if (data.databases) {
+        setNotionDatabases(data.databases);
+        if (data.databases.length > 0) {
+          setSelectedDatabaseId(data.databases[0].id);
+        }
+      }
+    } catch (err) {
+      console.error("Failed to fetch databases:", err);
+    }
+  };
+
+  const createNewDatabase = async () => {
+    setIsCreatingDatabase(true);
+    setError("");
+
+    try {
+      const response = await fetch("/api/notion/databases", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          name: `Assignment Tracker - ${new Date().getFullYear()}`,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to create database");
+      }
+
+      const data = await response.json();
+      setNotionDatabases((prev) => [...prev, data]);
+      setSelectedDatabaseId(data.id);
+      setNotionSuccess(`Created new database: ${data.title}`);
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : "Failed to create database"
+      );
+    } finally {
+      setIsCreatingDatabase(false);
+    }
+  };
+
   const handleParseSyllabi = async () => {
     if (files.length === 0) return;
 
@@ -112,6 +193,10 @@ export default function Home() {
 
   const sendToNotion = async () => {
     if (parsedResults.length === 0) return;
+    if (!selectedDatabaseId) {
+      setError("Please select or create a Notion database first");
+      return;
+    }
 
     setIsSendingToNotion(true);
     setError("");
@@ -125,7 +210,7 @@ export default function Home() {
         },
         body: JSON.stringify({
           results: parsedResults,
-          notionDatabaseId: notionDatabaseId || undefined,
+          notionDatabaseId: selectedDatabaseId,
         }),
       });
 
@@ -157,6 +242,87 @@ export default function Home() {
           Upload your course syllabus PDFs to automatically create a Notion
           deadline tracker
         </p>
+
+        {/* Notion Connection Section */}
+        {!notionConnected ? (
+          <div className="mb-8 p-6 bg-gradient-to-r from-purple-50 to-blue-50 dark:from-purple-900/20 dark:to-blue-900/20 rounded-lg border border-purple-200 dark:border-purple-800">
+            <div className="flex items-start gap-4">
+              <svg
+                className="h-12 w-12 text-purple-600 dark:text-purple-400 flex-shrink-0"
+                fill="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path d="M4.459 4.208c.746.606 1.026.56 2.428.466l13.215-.793c.28 0 .047-.28-.046-.326L17.86 1.968c-.42-.326-.981-.7-2.055-.607L3.01 2.295c-.466.046-.56.28-.374.466zm.793 3.08v13.904c0 .747.373 1.027 1.214.98l14.523-.84c.841-.046.935-.56.935-1.167V6.354c0-.606-.233-.933-.748-.887l-15.177.887c-.56.047-.747.327-.747.933zm14.337.745c.093.42 0 .84-.42.888l-.7.14v10.264c-.608.327-1.168.514-1.635.514-.748 0-.935-.234-1.495-.933l-4.577-7.186v6.952L12.21 19s0 .84-1.168.84l-3.222.186c-.093-.186 0-.653.327-.746l.84-.233V9.854L7.822 9.76c-.094-.42.14-1.026.793-1.073l3.456-.233 4.764 7.279v-6.44l-1.215-.139c-.093-.514.28-.887.747-.933zM1.936 1.035l13.31-.98c1.635-.14 2.055-.047 3.082.7l4.249 2.986c.7.513.934.653.934 1.213v16.378c0 1.026-.373 1.634-1.68 1.726l-15.458.934c-.98.047-1.448-.093-1.962-.747l-3.129-4.06c-.56-.747-.793-1.306-.793-1.96V2.667c0-.839.374-1.54 1.447-1.632z" />
+              </svg>
+              <div className="flex-1">
+                <h2 className="text-xl font-semibold text-zinc-900 dark:text-zinc-100 mb-2">
+                  Connect to Notion
+                </h2>
+                <p className="text-zinc-600 dark:text-zinc-400 mb-4">
+                  Connect your Notion account to upload assignment deadlines directly
+                </p>
+                <button
+                  onClick={connectNotion}
+                  disabled={isConnectingNotion}
+                  className="cursor-pointer bg-purple-600 hover:bg-purple-700 text-white font-semibold py-2 px-6 rounded-lg transition-colors disabled:opacity-50"
+                >
+                  {isConnectingNotion ? "Connecting..." : "Connect Notion"}
+                </button>
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div className="mb-8 p-6 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800">
+            <div className="flex items-center gap-3 mb-4">
+              <svg
+                className="h-6 w-6 text-green-600 dark:text-green-400"
+                fill="currentColor"
+                viewBox="0 0 20 20"
+              >
+                <path
+                  fillRule="evenodd"
+                  d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                  clipRule="evenodd"
+                />
+              </svg>
+              <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">
+                Notion Connected!
+              </h2>
+            </div>
+
+            {/* Database Selection */}
+            <div className="space-y-3">
+              <label className="block text-sm font-medium text-zinc-900 dark:text-zinc-100">
+                Select Assignment Tracker Database
+              </label>
+              {notionDatabases.length > 0 ? (
+                <select
+                  value={selectedDatabaseId}
+                  onChange={(e) => setSelectedDatabaseId(e.target.value)}
+                  className="w-full px-3 py-2 border border-zinc-300 dark:border-zinc-600 rounded-md bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100"
+                >
+                  {notionDatabases.map((db) => (
+                    <option key={db.id} value={db.id}>
+                      {db.title}
+                    </option>
+                  ))}
+                </select>
+              ) : (
+                <p className="text-sm text-zinc-600 dark:text-zinc-400">
+                  No databases found. Create one below!
+                </p>
+              )}
+
+              <button
+                onClick={createNewDatabase}
+                disabled={isCreatingDatabase}
+                className="text-sm text-purple-600 dark:text-purple-400 hover:text-purple-700 dark:hover:text-purple-300 font-medium"
+              >
+                {isCreatingDatabase ? "Creating..." : "+ Create New Database"}
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* File Upload Area */}
         <div
@@ -265,7 +431,7 @@ export default function Home() {
             {/* Parse Button */}
             <button
               onClick={handleParseSyllabi}
-              className="mt-6 w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="cursor-pointer mt-6 w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               disabled={files.length === 0 || isParsing}
             >
               {isParsing ? (
@@ -405,32 +571,13 @@ export default function Home() {
               </div>
             ))}
 
-            {/* Notion Database Configuration */}
-            <div className="mt-6 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
-              <label className="block text-sm font-medium text-zinc-900 dark:text-zinc-100 mb-2">
-                Notion Database ID (Optional)
-              </label>
-              <input
-                type="text"
-                value={notionDatabaseId}
-                onChange={(e) => setNotionDatabaseId(e.target.value)}
-                placeholder="Enter your Notion database ID"
-                className="w-full px-3 py-2 border border-zinc-300 dark:border-zinc-600 rounded-md bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 text-sm"
-              />
-              <p className="mt-2 text-xs text-zinc-600 dark:text-zinc-400">
-                To find your database ID, open your Notion database and copy the
-                ID from the URL.
-                <br />
-                Example: notion.so/myworkspace/<strong>abc123def456</strong>
-                ?v=...
-              </p>
-            </div>
-
             {/* Send to Notion Button */}
             <button
               onClick={sendToNotion}
-              disabled={isSendingToNotion}
-              className="mt-4 w-full bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white font-semibold py-3 px-6 rounded-lg transition-all shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed"
+              disabled={
+                isSendingToNotion || !notionConnected || !selectedDatabaseId
+              }
+              className="cursor-pointer mt-6 w-full bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white font-semibold py-3 px-6 rounded-lg transition-all shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isSendingToNotion ? (
                 <span className="flex items-center justify-center gap-2">
