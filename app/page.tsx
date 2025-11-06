@@ -24,12 +24,6 @@ interface ParsedSyllabus {
   instructor?: string;
 }
 
-interface NotionDatabase {
-  id: string;
-  title: string;
-  url: string;
-}
-
 export default function Home() {
   const [files, setFiles] = useState<UploadedFile[]>([]);
   const [isDragging, setIsDragging] = useState(false);
@@ -40,16 +34,12 @@ export default function Home() {
   const [notionSuccess, setNotionSuccess] = useState<string>("");
   const [notionConnected, setNotionConnected] = useState(false);
   const [isConnectingNotion, setIsConnectingNotion] = useState(false);
-  const [notionDatabases, setNotionDatabases] = useState<NotionDatabase[]>([]);
-  const [selectedDatabaseId, setSelectedDatabaseId] = useState<string>("");
-  const [isCreatingDatabase, setIsCreatingDatabase] = useState(false);
 
   // Check if Notion was just connected (from OAuth redirect)
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     if (params.get("connected") === "true") {
       setNotionConnected(true);
-      fetchNotionDatabases();
       // Clean up URL
       window.history.replaceState({}, "", "/");
     } else if (params.get("error")) {
@@ -113,54 +103,6 @@ export default function Home() {
     window.location.href = "/api/composio/connect-notion";
   };
 
-  const fetchNotionDatabases = async () => {
-    try {
-      const response = await fetch("/api/notion/databases");
-      const data = await response.json();
-
-      if (data.databases) {
-        setNotionDatabases(data.databases);
-        if (data.databases.length > 0) {
-          setSelectedDatabaseId(data.databases[0].id);
-        }
-      }
-    } catch (err) {
-      console.error("Failed to fetch databases:", err);
-    }
-  };
-
-  const createNewDatabase = async () => {
-    setIsCreatingDatabase(true);
-    setError("");
-
-    try {
-      const response = await fetch("/api/notion/databases", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          name: `Assignment Tracker - ${new Date().getFullYear()}`,
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error("Failed to create database");
-      }
-
-      const data = await response.json();
-      setNotionDatabases((prev) => [...prev, data]);
-      setSelectedDatabaseId(data.id);
-      setNotionSuccess(`Created new database: ${data.title}`);
-    } catch (err) {
-      setError(
-        err instanceof Error ? err.message : "Failed to create database"
-      );
-    } finally {
-      setIsCreatingDatabase(false);
-    }
-  };
-
   const handleParseSyllabi = async () => {
     if (files.length === 0) return;
 
@@ -193,25 +135,34 @@ export default function Home() {
 
   const sendToNotion = async () => {
     if (parsedResults.length === 0) return;
-    if (!selectedDatabaseId) {
-      setError("Please select or create a Notion database first");
-      return;
-    }
 
     setIsSendingToNotion(true);
     setError("");
     setNotionSuccess("");
 
     try {
-      const response = await fetch("/api/send-to-notion", {
+      // Build a prompt for the AI to create database and add assignments
+      const assignmentsList = parsedResults.flatMap((syllabus) =>
+        syllabus.assignments.map((a) => ({
+          course: syllabus.courseName || syllabus.fileName,
+          title: a.title,
+          dueDate: a.dueDate,
+          weight: a.weight,
+          type: a.type,
+          description: a.description,
+        }))
+      );
+
+      const prompt = `Create a Notion database called "Assignment Tracker ${new Date().getFullYear()}" with properties: Name (title), Due Date (date), Course (select), Weight (text), Status (select with options: Not Started, In Progress, Completed), Type (select with options: Assignment, Quiz, Exam, Project). Then add these ${
+        assignmentsList.length
+      } assignments to it: ${JSON.stringify(assignmentsList, null, 2)}`;
+
+      const response = await fetch("/api/notion-action", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({
-          results: parsedResults,
-          notionDatabaseId: selectedDatabaseId,
-        }),
+        body: JSON.stringify({ prompt }),
       });
 
       if (!response.ok) {
@@ -220,7 +171,10 @@ export default function Home() {
       }
 
       const data = await response.json();
-      setNotionSuccess(data.message);
+      setNotionSuccess(
+        "Successfully created database and added all assignments to Notion!"
+      );
+      console.log("AI Response:", data);
     } catch (err) {
       setError(
         err instanceof Error
@@ -259,7 +213,8 @@ export default function Home() {
                   Connect to Notion
                 </h2>
                 <p className="text-zinc-600 dark:text-zinc-400 mb-4">
-                  Connect your Notion account to upload assignment deadlines directly
+                  Connect your Notion account to upload assignment deadlines
+                  directly
                 </p>
                 <button
                   onClick={connectNotion}
@@ -289,38 +244,10 @@ export default function Home() {
                 Notion Connected!
               </h2>
             </div>
-
-            {/* Database Selection */}
-            <div className="space-y-3">
-              <label className="block text-sm font-medium text-zinc-900 dark:text-zinc-100">
-                Select Assignment Tracker Database
-              </label>
-              {notionDatabases.length > 0 ? (
-                <select
-                  value={selectedDatabaseId}
-                  onChange={(e) => setSelectedDatabaseId(e.target.value)}
-                  className="w-full px-3 py-2 border border-zinc-300 dark:border-zinc-600 rounded-md bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100"
-                >
-                  {notionDatabases.map((db) => (
-                    <option key={db.id} value={db.id}>
-                      {db.title}
-                    </option>
-                  ))}
-                </select>
-              ) : (
-                <p className="text-sm text-zinc-600 dark:text-zinc-400">
-                  No databases found. Create one below!
-                </p>
-              )}
-
-              <button
-                onClick={createNewDatabase}
-                disabled={isCreatingDatabase}
-                className="text-sm text-purple-600 dark:text-purple-400 hover:text-purple-700 dark:hover:text-purple-300 font-medium"
-              >
-                {isCreatingDatabase ? "Creating..." : "+ Create New Database"}
-              </button>
-            </div>
+            <p className="text-sm text-zinc-600 dark:text-zinc-400">
+              Ready to send assignments to Notion. The AI will automatically
+              create a database for you!
+            </p>
           </div>
         )}
 
@@ -574,9 +501,7 @@ export default function Home() {
             {/* Send to Notion Button */}
             <button
               onClick={sendToNotion}
-              disabled={
-                isSendingToNotion || !notionConnected || !selectedDatabaseId
-              }
+              disabled={isSendingToNotion || !notionConnected}
               className="cursor-pointer mt-6 w-full bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white font-semibold py-3 px-6 rounded-lg transition-all shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isSendingToNotion ? (

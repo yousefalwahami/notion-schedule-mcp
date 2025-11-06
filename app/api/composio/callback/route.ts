@@ -44,12 +44,12 @@ export async function GET(req: Request) {
       console.log("Connection established:", connectedAccount.id);
       console.log("Connection status:", connectedAccount.status);
 
-      // Clear the cookie
+      // Clear only the connection request cookie, keep the user_id for future API calls
       const response = NextResponse.redirect(
         new URL("/?connected=true", req.url)
       );
       response.cookies.delete("composio_connection_request_id");
-      response.cookies.delete("composio_user_id");
+      // Keep composio_user_id cookie for subsequent API calls to databases, etc.
 
       return response;
     } catch (waitError) {

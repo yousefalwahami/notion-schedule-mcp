@@ -32,12 +32,12 @@ export async function GET(request: Request) {
       baseURL: composioBase,
     });
 
-    console.log("Linking account for user:", userId);
+    console.log("Initiating connection for user:", userId);
     console.log("Using auth config:", authConfigId);
     console.log("Callback URL:", callbackUrl);
 
-    // Use the link method (hosted authentication)
-    const connectionRequest = await composio.connectedAccounts.link(
+    // Use initiate method per official docs
+    const connectionRequest = await composio.connectedAccounts.initiate(
       userId,
       authConfigId,
       { callbackUrl }
