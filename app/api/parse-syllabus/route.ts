@@ -1,13 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
 import * as pdfjsLib from "pdfjs-dist/legacy/build/pdf.mjs";
+import OpenAI from "openai";
 
 // Set a dummy worker source to prevent worker errors in Node.js
 pdfjsLib.GlobalWorkerOptions.workerSrc =
   "pdfjs-dist/legacy/build/pdf.worker.mjs";
 
-// Nebius AI configuration
-const NEBIUS_API_KEY = process.env.NEBIUS_API_KEY;
-const NEBIUS_API_URL = "https://api.studio.nebius.com/v1/chat/completions";
+// Groq AI configuration
+const groq = new OpenAI({
+  apiKey: process.env.GROQ_API_KEY,
+  baseURL: "https://api.groq.com/openai/v1",
+});
 
 interface Assignment {
   title: string;
@@ -95,43 +98,27 @@ Return ONLY a valid JSON object with this structure (no markdown, no code blocks
 }`;
 
   try {
-    // Call Nebius AI API
-    const response = await fetch(NEBIUS_API_URL, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${NEBIUS_API_KEY}`,
-      },
-      body: JSON.stringify({
-        // model: "meta-llama/Meta-Llama-3.1-70B-Instruct",
-        model: "openai/gpt-oss-120b",
-        messages: [
-          {
-            role: "system",
-            content:
-              "You are a helpful assistant that extracts structured data from syllabi. Always return valid JSON only, no markdown formatting.",
-          },
-          {
-            role: "user",
-            content: prompt,
-          },
-        ],
-        temperature: 0.3,
-      }),
+    // Call Groq AI API
+    const completion = await groq.chat.completions.create({
+      model: "llama-3.3-70b-versatile",
+      messages: [
+        {
+          role: "system",
+          content:
+            "You are a helpful assistant that extracts structured data from syllabi. Always return valid JSON only, no markdown formatting.",
+        },
+        {
+          role: "user",
+          content: prompt,
+        },
+      ],
+      temperature: 0.1,
+      response_format: { type: "json_object" },
     });
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error("Nebius AI API error:", response.status, errorText);
-      throw new Error(
-        `Nebius AI API error: ${response.status} ${response.statusText} - ${errorText}`
-      );
-    }
+    const responseText = completion.choices[0]?.message?.content || "{}";
 
-    const data = await response.json();
-    const responseText = data.choices[0]?.message?.content || "{}";
-
-    // Remove markdown code blocks if present
+    // Remove markdown code blocks if present (just in case)
     let cleanedText = responseText.trim();
     if (cleanedText.startsWith("```json")) {
       cleanedText = cleanedText.replace(/^```json\n/, "").replace(/\n```$/, "");

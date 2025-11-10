@@ -29,12 +29,10 @@ function transformDbProperties(props: any[]) {
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function transformPageProperties(page: Record<string, any>) {
   // Return array format: [{name: "Field", type: "...", value: "..."}]
-  // For simple types, Composio accepts plain string values!
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const propsArray: any[] = [];
 
   for (const [key, value] of Object.entries(page)) {
-    // ✅ Title field - just send the plain text
     if (key === "Name") {
       propsArray.push({
         name: key,
@@ -44,7 +42,6 @@ function transformPageProperties(page: Record<string, any>) {
       continue;
     }
 
-    // ✅ Date fields - send ISO date string
     if (key === "Due Date") {
       // If null/empty, skip this property entirely instead of sending "null"
       if (!value) {
@@ -58,7 +55,6 @@ function transformPageProperties(page: Record<string, any>) {
       continue;
     }
 
-    // ✅ Select fields - just send the option name
     if (["Course", "Type", "Status"].includes(key)) {
       // If null/empty, skip this property entirely
       if (!value) {
@@ -72,7 +68,6 @@ function transformPageProperties(page: Record<string, any>) {
       continue;
     }
 
-    // ✅ Rich text fields - just send the plain text
     if (key === "Weight") {
       propsArray.push({
         name: key,
