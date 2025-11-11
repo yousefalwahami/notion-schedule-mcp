@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import * as pdfjsLib from "pdfjs-dist/legacy/build/pdf.mjs";
 import OpenAI from "openai";
 
+// Force Node.js runtime (required for pdfjs-dist)
+export const runtime = "nodejs";
+
 // Set a dummy worker source to prevent worker errors in Node.js
 pdfjsLib.GlobalWorkerOptions.workerSrc =
   "pdfjs-dist/legacy/build/pdf.worker.mjs";
