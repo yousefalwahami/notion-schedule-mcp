@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import OpenAI from "openai";
-// @ts-expect-error - pdf-parse doesn't have TypeScript types
-import pdf from "pdf-parse";
+// Import worker BEFORE PDFParse for serverless environments (Vercel, AWS Lambda, etc.)
+import "pdf-parse/worker";
+import { PDFParse, VerbosityLevel } from "pdf-parse";
 
 // Groq AI configuration
 const groq = new OpenAI({
@@ -28,19 +29,32 @@ interface ParsedSyllabus {
 
 async function extractTextFromPDF(arrayBuffer: ArrayBuffer): Promise<string> {
   try {
-    // Convert ArrayBuffer to Buffer for pdf-parse
+    // Convert ArrayBuffer to Buffer for pdf-parse v2
     const buffer = Buffer.from(arrayBuffer);
 
-    // Parse PDF with pdf-parse
-    const data = await pdf(buffer);
+    // Initialize PDFParse with buffer data
+    // Note: Worker configuration is automatic in Node.js/serverless environments
+    // pdf-parse v2 handles worker setup automatically for Next.js/Vercel
+    const parser = new PDFParse({
+      data: buffer,
+      verbosity: VerbosityLevel.ERRORS, // Reduce logging in production
+    });
 
-    return data.text;
+    // Extract text from PDF
+    const result = await parser.getText();
+
+    // Clean up resources
+    await parser.destroy();
+
+    return result.text;
   } catch (error) {
     console.error("Error extracting text from PDF:", error);
+    if (error instanceof Error) {
+      console.error("Error details:", error.message);
+    }
     throw new Error("Failed to extract text from PDF");
   }
 }
-
 async function parseAssignmentsWithAI(
   text: string,
   fileName: string
