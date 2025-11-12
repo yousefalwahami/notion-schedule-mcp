@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import OpenAI from "openai";
 // @ts-expect-error - pdf-parse doesn't have TypeScript types
-import pdf from "pdf-parse/lib/pdf-parse.js";
+import pdf from "pdf-parse";
 
 // Groq AI configuration
 const groq = new OpenAI({
