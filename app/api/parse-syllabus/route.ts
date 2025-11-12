@@ -1,13 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import * as pdfjsLib from "pdfjs-dist/legacy/build/pdf.mjs";
 import OpenAI from "openai";
-
-// Force Node.js runtime (required for pdfjs-dist)
-export const runtime = "nodejs";
-
-// Set a dummy worker source to prevent worker errors in Node.js
-pdfjsLib.GlobalWorkerOptions.workerSrc =
-  "pdfjs-dist/legacy/build/pdf.worker.mjs";
+// @ts-expect-error - pdf-parse doesn't have TypeScript types
+import pdf from "pdf-parse/lib/pdf-parse.js";
 
 // Groq AI configuration
 const groq = new OpenAI({
@@ -34,27 +28,13 @@ interface ParsedSyllabus {
 
 async function extractTextFromPDF(arrayBuffer: ArrayBuffer): Promise<string> {
   try {
-    const loadingTask = pdfjsLib.getDocument({
-      data: new Uint8Array(arrayBuffer),
-      useSystemFonts: true,
-      useWorkerFetch: false,
-      isEvalSupported: false,
-      standardFontDataUrl: undefined,
-    });
-    const pdfDocument = await loadingTask.promise;
+    // Convert ArrayBuffer to Buffer for pdf-parse
+    const buffer = Buffer.from(arrayBuffer);
 
-    let fullText = "";
+    // Parse PDF with pdf-parse
+    const data = await pdf(buffer);
 
-    for (let pageNum = 1; pageNum <= pdfDocument.numPages; pageNum++) {
-      const page = await pdfDocument.getPage(pageNum);
-      const textContent = await page.getTextContent();
-      const pageText = textContent.items
-        .map((item) => ("str" in item ? item.str : ""))
-        .join(" ");
-      fullText += pageText + "\n";
-    }
-
-    return fullText;
+    return data.text;
   } catch (error) {
     console.error("Error extracting text from PDF:", error);
     throw new Error("Failed to extract text from PDF");
