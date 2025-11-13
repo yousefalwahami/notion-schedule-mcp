@@ -334,14 +334,20 @@ export default function Home() {
                   </div>
                   <button
                     onClick={() => removeFile(uploadedFile.id)}
-                    className="ml-4 p-2 text-zinc-400 hover:text-red-500 dark:text-zinc-500 dark:hover:text-red-400 transition-colors"
+                    className="cursor-pointer mx-4"
                     aria-label="Remove file"
                   >
                     <svg
                       className="h-5 w-5"
                       fill="none"
-                      stroke="currentColor"
                       viewBox="0 0 24 24"
+                      style={{ stroke: "rgb(161 161 170)" }}
+                      onMouseEnter={(e) =>
+                        (e.currentTarget.style.stroke = "rgb(239 68 68)")
+                      }
+                      onMouseLeave={(e) =>
+                        (e.currentTarget.style.stroke = "rgb(161 161 170)")
+                      }
                     >
                       <path
                         strokeLinecap="round"
