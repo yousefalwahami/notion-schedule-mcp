@@ -63,9 +63,13 @@ async function parseAssignmentsWithAI(
 
 For each assignment/deadline, extract:
 1. Title/Name
-2. Due Date (in ISO format YYYY-MM-DD if possible, otherwise as written)
+2. Due Date - CRITICAL FORMAT RULES:
+   - MUST be a specific date like "2025-01-15", "Jan 15, 2025", "01/15/2025"
+   - If the syllabus says "Every Friday" or "Weekly on Monday" - extract EACH occurrence as separate assignments with specific dates
+   - If date is vague like "During exam period" or "TBA" - use "TBA"
+   - NEVER use vague descriptions like "Every Thursday" or "Weekly" - always convert to actual dates
 3. Weight/Percentage (e.g., "20%", "15 points")
-4. Type (e.g., "Exam", "Assignment", "Project", "Quiz", "Paper")
+4. Type (e.g., "Exam", "Assignment", "Project", "Quiz", "Paper", "Participation")
 5. Description (if available)
 6. Any additional important notes
 
@@ -73,6 +77,8 @@ Also extract:
 - Course name/code
 - Semester/term
 - Instructor name
+
+IMPORTANT: For recurring assignments (e.g., "Weekly participation every Friday"), create SEPARATE entries for each occurrence with the actual date.
 
 Syllabus text:
 ${text}
