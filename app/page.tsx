@@ -77,7 +77,10 @@ export default function Home() {
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
       const newFiles = Array.from(e.target.files)
-        .filter((file) => file.type === "application/pdf")
+        .filter((file) => {
+          const ext = file.name.toLowerCase().split(".").pop() || "";
+          return ["pdf", "docx", "doc"].includes(ext);
+        })
         .map((file) => ({
           file,
           id: `${file.name}-${Date.now()}-${Math.random()}`,
@@ -91,7 +94,10 @@ export default function Home() {
     setIsDragging(false);
 
     const droppedFiles = Array.from(e.dataTransfer.files)
-      .filter((file) => file.type === "application/pdf")
+      .filter((file) => {
+        const ext = file.name.toLowerCase().split(".").pop() || "";
+        return ["pdf", "docx", "doc"].includes(ext);
+      })
       .map((file) => ({
         file,
         id: `${file.name}-${Date.now()}-${Math.random()}`,
@@ -418,7 +424,7 @@ export default function Home() {
           Syllabus to Notion Schedule
         </h1>
         <p className="text-zinc-600 dark:text-zinc-400 mb-8">
-          Upload your course syllabus PDFs to automatically create a Notion
+          Upload your course syllabus PDFs or DOCX files to automatically create a Notion
           deadline tracker
         </p>
 
@@ -550,21 +556,21 @@ export default function Home() {
               htmlFor="file-upload"
               className="relative cursor-pointer rounded-md font-semibold text-blue-600 dark:text-blue-400 hover:text-blue-500"
             >
-              <span>Upload PDF files</span>
+              <span>Upload PDF/DOCX files</span>
               <input
                 id="file-upload"
                 name="file-upload"
                 type="file"
                 className="sr-only"
                 multiple
-                accept=".pdf"
+                accept=".pdf,.docx"
                 onChange={handleFileChange}
               />
             </label>
             <p className="pl-1">or drag and drop</p>
           </div>
           <p className="text-xs text-zinc-500 dark:text-zinc-500 mt-2">
-            PDF files only
+            PDF/DOCX files only
           </p>
         </div>
 

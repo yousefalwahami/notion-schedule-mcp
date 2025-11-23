@@ -3,6 +3,7 @@ import OpenAI from "openai";
 // Import worker BEFORE PDFParse for serverless environments (Vercel, AWS Lambda, etc.)
 import "pdf-parse/worker";
 import { PDFParse, VerbosityLevel } from "pdf-parse";
+import * as mammoth from "mammoth";
 
 // Groq AI configuration
 const groq = new OpenAI({
@@ -25,6 +26,19 @@ interface ParsedSyllabus {
   assignments: Assignment[];
   semester?: string;
   instructor?: string;
+}
+
+async function extractTextFromDOCX(arrayBuffer: ArrayBuffer): Promise<string> {
+  try {
+    const buffer = Buffer.from(arrayBuffer);
+
+    const result = await mammoth.extractRawText({ buffer });
+
+    return result.value || "";
+  } catch (error) {
+    console.error("DOCX parse error:", error);
+    throw new Error("Failed to extract text from DOCX");
+  }
 }
 
 async function extractTextFromPDF(arrayBuffer: ArrayBuffer): Promise<string> {
@@ -161,7 +175,21 @@ export async function POST(request: NextRequest) {
         const arrayBuffer = await file.arrayBuffer();
 
         // Extract text from PDF
-        const text = await extractTextFromPDF(arrayBuffer);
+        let text = "";
+        const fileType = file.name.toLowerCase();
+
+        if (fileType.endsWith(".pdf")) {
+          text = await extractTextFromPDF(arrayBuffer);
+        } else if (fileType.endsWith(".docx")) {
+          text = await extractTextFromDOCX(arrayBuffer);
+        } else {
+          results.push({
+            fileName: file.name,
+            assignments: [],
+            courseName: "Unsupported file type",
+          });
+          continue;
+        }
 
         // Parse with AI
         const parsed = await parseAssignmentsWithAI(text, file.name);
