@@ -373,9 +373,10 @@ export default function Home() {
             },
           ];
         })
-      );
+      )
+      .reverse();
 
-      const prompt = `Create a Notion database called "Assignment Tracker ${new Date().getFullYear()}" with properties: Name (title), Due Date (date), Course (select), Weight (text), Status (select with options: Not Started, In Progress, Completed), Type (select with options: Assignment, Quiz, Exam, Project). Then add these ${
+      const prompt = `Create a Notion database called "Assignment Tracker ${new Date().getFullYear()}" with properties: Name (title), Due Date (date), Course (select), Weight (text), Status (create with options: Not Started, In Progress, Completed), Type (create with options: Assignment, Quiz, Exam, Project, Participation). Then add these ${
         assignmentsList.length
       } assignments to it: ${JSON.stringify(assignmentsList, null, 2)}`;
 
@@ -398,8 +399,11 @@ export default function Home() {
       );
 
       // Extract URL from response if available
-      if (data.url) {
-        setNotionPageUrl(data.url);
+      const notionUrl = data?.results?.[0]?.data.url;
+      console.log("Notion URL:", notionUrl);
+
+      if (notionUrl) {
+        setNotionPageUrl(notionUrl);
       }
 
       // Clear sessionStorage after successful upload
@@ -428,7 +432,8 @@ export default function Home() {
           deadline tracker
         </p>
 
-        {/* Semester Date Input */}
+        
+        {/* Semester Date Input 
         <div className="mb-8 p-6 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
           <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100 mb-4">
             📅 Semester Dates
@@ -471,6 +476,7 @@ export default function Home() {
             </div>
           </div>
         </div>
+        */}
 
         {/* Notion Connection Section */}
         {!notionConnected ? (
@@ -1226,6 +1232,7 @@ export default function Home() {
                     <option value="Exam">Exam</option>
                     <option value="Project">Project</option>
                     <option value="Paper">Paper</option>
+                    <option value="Participation">Participation</option>
                   </select>
                 </div>
 
