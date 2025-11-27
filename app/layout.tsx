@@ -14,7 +14,7 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "Notion Schedule MCP",
-  description: "AI-powered Notion syllabus to schedule importer",
+  description: "AI-powered Notion syllabus PDF/DOCX to schedule importer",
 };
 
 export default function RootLayout({
