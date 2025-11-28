@@ -78,19 +78,20 @@ const prompt = `You are an expert at parsing course syllabi. Extract all assignm
 For each assignment/deadline, extract:
 1. Title/Name
 2. Due Date - CRITICAL FORMAT RULES:
-   - MUST be a specific date like "2025-01-15", "Jan 15, 2025", "01/15/2025"
-   - If the syllabus says "Every Friday" or "Weekly on Monday" and a semester date range is provided, calculate and extract EACH occurrence as separate assignments with specific dates
-   - If date is vague like "During exam period" or "TBA" - leave date as an empty string ""
-   - NEVER use vague descriptions like "Every Thursday" or "Weekly" - always convert to actual dates if possible
+   - MUST be a specific date in ISO format YYYY-MM-DD (e.g., "2025-01-15"). Convert month names and ordinal suffixes (e.g., "Oct. 31st") to ISO.
+   - If the syllabus lists a recurring schedule (e.g., "Every Friday") and the semester date range is present, expand into separate entries for each occurrence with real dates.
+   - If the date is vague (e.g., "During exam period", "TBA"), set dueDate to an empty string "".
 3. Weight/Percentage - STRICT RULES:
-   - Output ONLY a final numeric percentage like "7%" or "12.5%"
-   - NEVER output text such as "part of", "portion of", "35%/5", or any explanations
-   - If a total weight is shared across multiple assignments (e.g., "5 quizzes = 20%"), divide the total evenly and return ONLY the final percentage per item (e.g., "4%")
-   - If weight is described in points (e.g., "50 points"), return exactly that string (e.g., "50 points")
-   - If no weight is specified, return an empty string ""
-4. Type (only use exactly one of: "Exam", "Assignment", "Project", "Quiz", "Paper", or "Participation")
-5. Description (if available, otherwise generate a quick summary)
-6. Any additional important notes (otherwise empty string "")
+   - Output ONLY a final numeric percentage like "7%" or a points string like "50 points".
+   - NEVER output explanatory text (e.g., "part of 35%", "35%/5") or show calculations.
+   - If a weight is given **for a category** (e.g., "Lab reports — 35%") and the syllabus also lists the concrete subitems that belong to that category (e.g., "Lab 1", "Lab 2", ...), DO NOT assign the full category percentage to each subitem. Instead:
+     - If the number of subitems N is clearly listed or determinable from the syllabus, divide the category percentage X evenly across those N subitems and return the final percentage per item (rounded to one decimal place if necessary) as e.g. "7%".
+     - If N is not determinable from the provided text/tables, return an empty string "" for the subitems' weight (do not guess).
+   - If a weight is stated for each item individually, use that value.
+   - If no weight is specified, return "".
+4. Type (use exactly one of: "Exam", "Assignment", "Project", "Quiz", "Paper", "Participation"). If it is unclear, default to "Assignment".
+5. Description (full sentence or short phrase; if none, "").
+6. Additional important notes (if none, "").
 
 Also extract:
 - Course name/code
@@ -98,10 +99,12 @@ Also extract:
 - Instructor name
 
 IMPORTANT:
-- For recurring assignments, create SEPARATE entries for each occurrence with a calculated real date
-- NEVER include calculations, explanations, or fractions in any field
-- ALL fields must be plain strings
-- EMPTY values must be returned as ""
+- For recurring assignments, create SEPARATE entries for each occurrence with actual dates
+- Cross-reference evaluation tables and schedule/deadlines tables: if a category weight appears in the evaluation table and individual items appear in a deadlines table, assume the evaluation weight applies to that set of items and split as described above (only when the set size N is clearly determinable).
+- If a category-level assessment (e.g., "Lab reports — 35%") is expanded into individual sub-assignments with their own titles and due dates (e.g., "Lab 1" through "Lab 5"), ONLY output the individual sub-assignments and DO NOT output the category itself.
+- NEVER include calculations, explanations, or fractions in any output field.
+- ALL fields must be plain strings; empty values must be "".
+- Output must be valid JSON.parse() without extra text.
 
 Syllabus text:
 ${text}
@@ -109,16 +112,16 @@ ${text}
 Return ONLY a valid JSON object with this EXACT structure:
 {
   "courseName": "Course Name",
-  "semester": "Fall 2024",
+  "semester": "Fall 2025",
   "instructor": "Professor Name",
   "assignments": [
     {
       "title": "Assignment 1",
-      "dueDate": "2024-09-15",
+      "dueDate": "2025-09-15",
       "weight": "10%",
       "type": "Assignment",
       "description": "Description here",
-      "additionalNotes": "Any notes"
+      "additionalNotes": ""
     }
   ]
 }
