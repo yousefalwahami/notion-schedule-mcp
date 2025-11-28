@@ -73,32 +73,40 @@ async function parseAssignmentsWithAI(
   text: string,
   fileName: string
 ): Promise<ParsedSyllabus> {
-  const prompt = `You are an expert at parsing course syllabi. Extract all assignments, exams, projects, and deadlines from the following syllabus text.
+const prompt = `You are an expert at parsing course syllabi. Extract all assignments, exams, projects, and deadlines from the following syllabus text.
 
 For each assignment/deadline, extract:
 1. Title/Name
 2. Due Date - CRITICAL FORMAT RULES:
    - MUST be a specific date like "2025-01-15", "Jan 15, 2025", "01/15/2025"
-   - If the syllabus says "Every Friday" or "Weekly on Monday" - extract EACH occurrence as separate assignments with specific dates
-   - If date is vague like "During exam period" or "TBA" - leave date blank
-   - NEVER use vague descriptions like "Every Thursday" or "Weekly" - always convert to actual dates
-3. Weight/Percentage (e.g., "20%", "15 points"):
-    - If it says "12%" over multiple assignments, divide 12% accordingly to each
-4. Type (only use "Exam", "Assignment", "Project", "Quiz", "Paper", or "Participation")
-5. Description (if available)
-6. Any additional important notes
+   - If the syllabus says "Every Friday" or "Weekly on Monday" and a semester date range is provided, calculate and extract EACH occurrence as separate assignments with specific dates
+   - If date is vague like "During exam period" or "TBA" - leave date as an empty string ""
+   - NEVER use vague descriptions like "Every Thursday" or "Weekly" - always convert to actual dates if possible
+3. Weight/Percentage - STRICT RULES:
+   - Output ONLY a final numeric percentage like "7%" or "12.5%"
+   - NEVER output text such as "part of", "portion of", "35%/5", or any explanations
+   - If a total weight is shared across multiple assignments (e.g., "5 quizzes = 20%"), divide the total evenly and return ONLY the final percentage per item (e.g., "4%")
+   - If weight is described in points (e.g., "50 points"), return exactly that string (e.g., "50 points")
+   - If no weight is specified, return an empty string ""
+4. Type (only use exactly one of: "Exam", "Assignment", "Project", "Quiz", "Paper", or "Participation")
+5. Description (if available, otherwise generate a quick summary)
+6. Any additional important notes (otherwise empty string "")
 
 Also extract:
 - Course name/code
 - Semester/term
 - Instructor name
 
-IMPORTANT: For recurring assignments (e.g., "Weekly participation every Friday"), create SEPARATE entries for each occurrence with the actual date.
+IMPORTANT:
+- For recurring assignments, create SEPARATE entries for each occurrence with a calculated real date
+- NEVER include calculations, explanations, or fractions in any field
+- ALL fields must be plain strings
+- EMPTY values must be returned as ""
 
 Syllabus text:
 ${text}
 
-Return ONLY a valid JSON object with this structure (no markdown, no code blocks):
+Return ONLY a valid JSON object with this EXACT structure:
 {
   "courseName": "Course Name",
   "semester": "Fall 2024",
@@ -113,7 +121,9 @@ Return ONLY a valid JSON object with this structure (no markdown, no code blocks
       "additionalNotes": "Any notes"
     }
   ]
-}`;
+}
+
+Do NOT include markdown, comments, or extra explanations.`;
 
   try {
     // Call Groq AI API
