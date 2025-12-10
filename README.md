@@ -1,13 +1,16 @@
 # Syllabus to Notion Schedule
 
-Automatically parse course syllabi PDFs and create a Notion deadline tracker using AI and Composio MCP integration.
+Automatically parse course syllabi from PDF or DOCX files and create a Notion deadline tracker using AI-powered extraction with Groq LLM and Composio integration.
 
 ## Features
 
-- 📄 **PDF Upload**: Drag & drop or select multiple syllabus PDF files
-- 🤖 **AI-Powered Parsing**: Extracts assignments, due dates, weights, and descriptions using LLM
-- 📊 **Beautiful Display**: View all extracted assignments in an organized format
-- 📝 **Notion Integration**: Send parsed data directly to Notion via Composio MCP
+- 📄 **Multi-Format Support**: Upload PDF and DOCX files via drag & drop
+- 🤖 **AI-Powered Parsing**: Uses Groq (llama-3.3-70b-versatile) to intelligently extract assignments
+- 🔄 **Recurring Assignments**: Automatically detects and handles weekly recurring assignments
+- ✏️ **Edit Assignments**: Modify titles, dates, weights, types, and descriptions before sending to Notion
+- 📅 **Date Picker**: Select specific dates for recurring assignments with interactive calendar
+- 🗑️ **Clear Results**: Remove all parsed data with one click
+- 📝 **Notion Integration**: AI automatically creates databases and adds assignments via Composio
 - 🎨 **Modern UI**: Clean, responsive design with dark mode support
 
 ## Getting Started
@@ -15,116 +18,128 @@ Automatically parse course syllabi PDFs and create a Notion deadline tracker usi
 ### Prerequisites
 
 1. Node.js 18+ installed
-2. Nebius API key ([Get one here](https://studio.nebius.com/))
+2. Groq API key ([Get one here](https://console.groq.com/))
 3. Composio API key ([Sign up at Composio](https://composio.dev))
-4. A Notion account and database for tracking assignments
+4. A Notion account
 
 ### Installation
 
-1. **Install dependencies**:
+1. **Clone the repository**:
 
    ```bash
-   npm install pdfjs-dist openai
+   git clone https://github.com/yousefalwahami/notion-schedule-mcp.git
+   cd notion-schedule-mcp
    ```
 
-2. **Configure environment variables**:
-
-   Copy `.env.example` to `.env.local`:
+2. **Install dependencies**:
 
    ```bash
-   copy .env.example .env.local
+   npm install
    ```
 
-   Fill in your API keys in `.env.local`:
+3. **Configure environment variables**:
+
+   Create a `.env.local` file in the root directory:
 
    ```env
-   OPENAI_API_KEY=your_openai_api_key_here
+   GROQ_API_KEY=your_groq_api_key_here
    COMPOSIO_API_KEY=your_composio_api_key_here
    ```
 
-3. **Run the development server**:
+4. **Run the development server**:
 
    ```bash
    npm run dev
    ```
 
-4. **Open your browser** and navigate to [http://localhost:3000](http://localhost:3000)
-
-## Setting Up Notion
-
-### Step 1: Create a Notion Database
-
-1. Go to your Notion workspace
-2. Create a new database (Table view recommended)
-3. Add the following properties:
-   - **Name** (Title) - Assignment name
-   - **Course** (Text) - Course name
-   - **Due Date** (Date) - When the assignment is due
-   - **Weight** (Text) - Grade weight (e.g., "20%")
-   - **Type** (Select) - Assignment type (Assignment, Exam, Project, etc.)
-   - **Status** (Select) - Status (Not Started, In Progress, Completed)
-
-### Step 2: Get Your Database ID
-
-1. Open your Notion database in a browser
-2. Copy the database ID from the URL:
-   ```
-   https://notion.so/myworkspace/abc123def456?v=...
-                                 ^^^^^^^^^^^^
-                                 This is your database ID
-   ```
-3. Paste this ID into the app when sending to Notion
-
-### Step 3: Connect Composio to Notion
-
-1. Log in to [Composio Dashboard](https://app.composio.dev)
-2. Connect your Notion account
-3. Grant necessary permissions for creating pages in databases
+5. **Open your browser** and navigate to [http://localhost:3000](http://localhost:3000)
 
 ## How to Use
 
-### 1. Upload Syllabi
+### 1. Connect Notion
 
-- Click "Upload PDF files" or drag & drop PDFs into the upload area
-- You can upload multiple syllabus files at once
-- View uploaded files with their names and sizes
+- Click "Connect Notion" on the home page
+- Authorize Composio to access your Notion account
+- Grant necessary permissions
+
+### 2. Upload Syllabi
+
+- Click "Upload PDF/DOCX files" or drag & drop files into the upload area
+- Supports both PDF and DOCX formats
+- Upload multiple syllabus files at once
 - Remove any file by clicking the X button
 
-### 2. Parse with AI
+### 3. Parse with AI
 
 - Click "Parse Syllabi with AI"
 - The app will:
-  - Extract text from all PDFs
-  - Use OpenAI to intelligently identify assignments
+  - Extract text from PDFs using pdf-parse v2
+  - Extract text from DOCX files using mammoth
+  - Use Groq AI (llama-3.3-70b-versatile) to intelligently identify assignments
+  - Detect recurring assignments (e.g., "Every Friday")
   - Extract: titles, due dates, weights, types, descriptions
 
-### 3. Review Extracted Data
+### 4. Review and Edit Extracted Data
 
 - View all extracted assignments organized by course
-- Check that dates and weights are correct
-- See assignment types, descriptions, and notes
+- **Edit Individual Assignments**: Click the edit icon to modify title, date, weight, type, description, and notes
+- **Recurring Assignments**: Automatically detected and marked with a purple "Recurring" badge
+- **Edit Dates**: For recurring assignments, click "Edit dates" to select/deselect specific occurrences
+- **Clear All**: Click the trash bin icon to remove all parsed results
 
-### 4. Send to Notion
+### 5. Send to Notion
 
-- (Optional) Enter your Notion Database ID
 - Click "Send to Notion"
-- All assignments will be created as individual pages in your database
+- The AI will automatically:
+  - Create a database called "Assignment Tracker 2025"
+  - Add properties: Name, Due Date, Course, Weight, Status, Type
+  - Add all assignments as individual entries
+  - Expand recurring assignments into separate dated entries
+- A link to your Notion page will be provided after successful upload
 
 ## Technology Stack
 
-- **Frontend**: Next.js 16, React 19, TypeScript, Tailwind CSS
-- **PDF Parsing**: pdfjs-dist (Mozilla's PDF.js)
-- **AI Processing**: OpenAI GPT-4o-mini
-- **Integration**: Composio MCP for Notion
-- **Deployment**: Vercel-ready
+- **Frontend**: Next.js 16.0.1, React 19.2.0, TypeScript, Tailwind CSS v4
+- **PDF Parsing**: pdf-parse v2.4.5 (Mozilla's PDF.js)
+- **DOCX Parsing**: mammoth
+- **AI Processing**: Groq AI (llama-3.3-70b-versatile model)
+- **Integration**: Composio for Notion API
+- **Deployment**: Vercel-ready with serverless configuration
+
+## Key Components
+
+### AI Prompt Engineering
+
+The app uses carefully crafted prompts that instruct the AI to:
+
+- Extract specific dates (YYYY-MM-DD format) instead of vague descriptions
+- Use "TBA" for unclear dates like "During exam period"
+- Create separate entries for recurring assignments with actual dates
+- Never use vague descriptions like "Every Thursday"
+
+### Recurring Assignment Detection
+
+Smart detection of patterns like:
+
+- "Every Friday" → Generates all Friday dates in semester
+- "Weekly on Monday" → Generates all Monday dates
+- "Throughout semester" → Generates weekly dates
+
+### Serverless Configuration
+
+Optimized for Vercel deployment with:
+
+```typescript
+serverExternalPackages: ["pdf-parse", "@napi-rs/canvas"];
+```
 
 ## API Routes
 
 ### POST `/api/parse-syllabus`
 
-Parses uploaded PDF syllabi and extracts assignment information.
+Parses uploaded PDF/DOCX syllabi and extracts assignment information using Groq AI.
 
-**Request**: FormData with `files` field containing PDF files
+**Request**: FormData with `files` field containing PDF or DOCX files
 
 **Response**:
 
@@ -138,12 +153,15 @@ Parses uploaded PDF syllabi and extracts assignment information.
       "instructor": "Dr. Smith",
       "assignments": [
         {
-          "title": "Assignment 1",
-          "dueDate": "2024-09-15",
+          "title": "Weekly Participation",
+          "dueDate": "Every Friday",
           "weight": "10%",
-          "type": "Assignment",
-          "description": "Introduction to algorithms",
-          "additionalNotes": "Submit via Canvas"
+          "type": "Participation",
+          "description": "Participation in online activities",
+          "additionalNotes": "Generally due Friday night",
+          "isRecurring": true,
+          "recurringDayOfWeek": "Friday",
+          "expandedDates": ["2024-09-06", "2024-09-13", "2024-09-20", ...]
         }
       ]
     }
@@ -151,26 +169,19 @@ Parses uploaded PDF syllabi and extracts assignment information.
 }
 ```
 
-### POST `/api/send-to-notion`
+### POST `/api/composio/connect-notion`
 
-Sends parsed assignments to Notion database via Composio.
+Initiates OAuth flow to connect user's Notion account via Composio.
+
+### POST `/api/notion-action`
+
+Sends natural language prompt to Composio AI to create Notion database and add assignments.
 
 **Request**:
 
 ```json
 {
-  "results": [...parsed results...],
-  "notionDatabaseId": "abc123def456" // optional
-}
-```
-
-**Response**:
-
-```json
-{
-  "success": true,
-  "message": "Successfully created 5 out of 5 assignments in Notion",
-  "pages": [...]
+  "prompt": "Create a Notion database called 'Assignment Tracker 2025' with properties..."
 }
 ```
 
@@ -179,11 +190,15 @@ Sends parsed assignments to Notion database via Composio.
 The AI extracts the following information from each assignment:
 
 - **Title**: Assignment/exam/project name
-- **Due Date**: ISO format (YYYY-MM-DD) when possible
+- **Due Date**: Specific dates (YYYY-MM-DD, "Jan 15, 2025", etc.) or "TBA" for vague dates
 - **Weight**: Grade percentage or points (e.g., "20%", "100 points")
-- **Type**: Assignment, Exam, Project, Quiz, Paper, etc.
+- **Type**: Assignment, Exam, Project, Quiz, Paper, or Participation
 - **Description**: Brief description of the assignment
 - **Additional Notes**: Any important notes or requirements
+- **Recurring Info** (if applicable):
+  - `isRecurring`: Boolean flag
+  - `recurringDayOfWeek`: The day of week (e.g., "Friday")
+  - `expandedDates`: Array of all specific dates
 
 Plus course-level information:
 
@@ -193,44 +208,70 @@ Plus course-level information:
 
 ## Troubleshooting
 
-### PowerShell Execution Policy Error
+### PDF/DOCX Text Not Extracted Properly
 
-If you see an error about script execution being disabled:
+- PDFs: Some scanned PDFs may not have text layers. Use text-based PDFs for best results
+- DOCX: Ensure the file is a valid .docx format (not .doc or corrupted)
 
-```powershell
-Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
-```
+### Groq API Issues
 
-Or use Command Prompt (cmd.exe) instead of PowerShell.
-
-### PDF Text Not Extracted Properly
-
-Some PDFs may be scanned images. The AI will do its best, but OCR capabilities are limited. Use text-based PDFs for best results.
+1. Verify your `GROQ_API_KEY` is set correctly in `.env.local`
+2. Check your API quota at [Groq Console](https://console.groq.com/)
+3. If you get rate limit errors, wait a few minutes and try again
 
 ### Composio/Notion Connection Issues
 
-1. Verify your Composio API key is correct
-2. Check that Notion is connected in Composio dashboard
-3. Ensure proper permissions are granted
-4. Verify your Notion database ID is correct
+1. Verify your `COMPOSIO_API_KEY` is correct
+2. Re-authorize Notion connection if needed
+3. Check Composio dashboard for connection status
 
-### OpenAI Rate Limits
+### Recurring Assignments Not Detected
 
-If parsing fails due to rate limits:
+The AI looks for patterns like:
 
-- Wait a few minutes and try again
-- Upgrade your OpenAI plan for higher limits
-- Parse fewer syllabi at once
+- "Every [Day]" (e.g., "Every Friday")
+- "Weekly on [Day]"
+- Must NOT contain specific dates
+
+If detection fails, you can manually edit the assignment after parsing.
 
 ## Future Enhancements
 
+- [x] PDF support
+- [x] DOCX support
+- [x] Recurring assignment detection
+- [x] Edit assignments before sending
+- [x] Interactive date picker for recurring assignments
 - [ ] OCR support for scanned PDFs
-- [ ] Multiple AI model options (Claude, Gemini, etc.)
+- [ ] Semester date range configuration
+- [ ] Multiple AI model options (Claude, GPT-4, etc.)
 - [ ] Calendar integration (Google Calendar, Outlook)
 - [ ] Export to CSV/Excel
 - [ ] Assignment reminders and notifications
 - [ ] Mobile app version
-- [ ] Batch processing for multiple courses
+
+## Project Structure
+
+```
+notion-schedule-mcp/
+├── app/
+│   ├── api/
+│   │   ├── composio/
+│   │   │   ├── callback/route.ts
+│   │   │   ├── connect-notion/route.ts
+│   │   │   ├── databases/route.ts
+│   │   │   └── link/route.ts
+│   │   ├── notion-action/route.ts
+│   │   └── parse-syllabus/route.ts
+│   ├── layout.tsx
+│   └── page.tsx
+├── lib/
+│   └── composio.ts
+├── types/
+│   └── index.ts
+├── next.config.ts
+└── package.json
+```
 
 ## Contributing
 
@@ -240,10 +281,14 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 
 MIT License
 
-## Support
+## Acknowledgments
 
-For issues or questions, please open an issue on GitHub or contact support.
+- [Groq](https://groq.com/) for fast LLM inference
+- [Composio](https://composio.dev/) for Notion integration
+- [pdf-parse](https://www.npmjs.com/package/pdf-parse) for PDF text extraction
+- [mammoth](https://www.npmjs.com/package/mammoth) for DOCX parsing
+- [Next.js](https://nextjs.org/) for the amazing framework
 
 ---
 
-Built with ❤️ using Next.js, OpenAI, and Composio
+Built with ❤️ using Next.js, Groq AI, and Composio
